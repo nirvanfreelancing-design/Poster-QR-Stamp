@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Poster QR Stamp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+/* VOICE: quick newsroom utility, calm and fast
+   IDEA: a press-room stamp — poster in, QR stamped on, poster out
+   PICTURE: the live poster preview itself, large
+   COLOUR and TYPE: maroon + yellow from the user's poster on cream; Mukta
+   LAYOUT: controls column + big preview; stacks on phones */
+:root{color-scheme:light dark;--bg:light-dark(#f7f3ea,#17110f);--ink:light-dark(#1a1f3a,#f3ece0);--card:light-dark(#fffdf8,#221a17);--line:light-dark(#e3dccd,#3a2e29);--pri:#8b1a1a;--acc:#f5c518;--mut:light-dark(#6b6457,#b7ab99)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Mukta,system-ui,sans-serif;overflow-x:clip}
+header{background:var(--pri);color:#fff;padding:18px max(5vw,16px)}
+header h1{margin:0;font-size:clamp(26px,4vw,36px);line-height:1.05;font-weight:800}
+header p{margin:4px 0 0;opacity:.9}
+main{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:24px;padding:24px max(5vw,16px);max-width:1240px;margin:auto}
+.panel{display:grid;gap:14px;align-content:start}
+.drop{border:2px dashed var(--line);border-radius:12px;background:var(--card);padding:14px;cursor:pointer;display:flex;gap:12px;align-items:center;min-height:76px}
+.drop:hover,.drop.over{border-color:var(--pri)}
+.drop:focus-within{outline:3px solid var(--acc);outline-offset:2px}
+.drop input{position:absolute;opacity:0;width:1px;height:1px}
+.drop img{width:52px;height:52px;object-fit:contain;border-radius:6px;background:#fff;flex:none}
+.drop b{display:block}.drop small{color:var(--mut)}
+label.row{display:grid;gap:4px;font-weight:600}
+.row span{font-weight:400;color:var(--mut)}
+input[type=range]{width:100%;accent-color:var(--pri);height:28px}
+select{font:inherit;font-size:16px;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);min-height:44px}
+.colors{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+input[type=color]{width:44px;height:44px;border:1px solid var(--line);border-radius:8px;padding:2px;background:var(--card)}
+button{font:inherit;font-weight:600;min-height:44px;padding:10px 18px;border-radius:10px;border:0;cursor:pointer}
+button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.go{background:var(--pri);color:#fff;font-size:18px}
+.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+.go:disabled{opacity:.45;cursor:not-allowed}
+.stage{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;display:grid;place-items:center;min-height:420px}
+.stage canvas{max-width:100%;max-height:78vh;height:auto;border-radius:6px;box-shadow:0 6px 24px rgb(0 0 0/.15)}
+.empty{color:var(--mut);text-align:center;padding:30px}
+.msg{min-height:1.5em;color:var(--mut);font-size:15px}
+@media(max-width:760px){main{grid-template-columns:minmax(0,1fr)}.stage{order:-1;min-height:260px}}
+</style>
+</head>
+<body>
+<header><h1>पोस्टर पर QR लगाएँ</h1><p>Poster + QR → exact, scannable QR stamped in the corner. Nothing is redrawn.</p></header>
+<main>
+  <section class="panel">
+    <label class="drop" id="dPoster"><input type="file" accept="image/*" id="fPoster"><img id="tPoster" alt="" hidden><div><b>1. Poster</b><small>Tap, drop or paste (Ctrl+V)</small></div></label>
+    <label class="row">2. Link for QR <span>QR is made automatically from this link</span>
+      <input type="url" id="link" placeholder="https://..." autocomplete="off" style="font:inherit;font-size:16px;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);min-height:44px"></label>
+    <label class="drop" id="dQr"><input type="file" accept="image/*" id="fQr"><img id="tQr" alt="" hidden><div><b>Or upload a QR image</b><small id="qrNote">Used only when the link box is empty</small></div></label>
+    <label class="row">Position
+      <select id="pos"><option value="tr">Top right</option><option value="tl">Top left</option><option value="br">Bottom right</option><option value="bl">Bottom left</option></select></label>
+    <label class="row">QR size <span id="vSize"></span><input type="range" id="size" min="9" max="22" value="12"></label>
+    <label class="row">Edge margin <span id="vMar"></span><input type="range" id="mar" min="0" max="80" value="30"></label>
+    <div class="row" style="display:grid;gap:4px;font-weight:600">Border (off by default)
+      <div class="colors"><input type="color" id="bc" value="#8b1a1a" aria-label="Border colour"><button class="ghost" id="auto" type="button">Match poster</button><button class="ghost" id="nob" type="button">No border</button></div></div>
+    <label class="row">Image format
+      <select id="fmt"><option value="png">PNG — best quality</option><option value="jpg">JPG — smaller file, for WhatsApp</option><option value="webp">WEBP — smallest file</option></select></label>
+    <button class="go" id="save" disabled>Save PNG</button>
+    <div class="msg" id="msg"></div>
+  </section>
+  <section class="stage" id="stage"><div class="empty" id="empty">Add a poster and a QR to see the preview here.</div><canvas id="cv" hidden></canvas></section>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+{
+const $=id=>document.getElementById(id);
+const cv=$('cv'),ctx=cv.getContext('2d');
+let poster=null,qr=null,border=false,dl=null,posterName='poster';
+const store={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+
+function loadImg(src){return new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=no;i.src=src})}
+function readFile(f){return new Promise(ok=>{const r=new FileReader();r.onload=()=>ok(r.result);r.readAsDataURL(f)})}
+
+async function setPoster(f){if(!f)return;const url=await readFile(f);poster=await loadImg(url);posterName=(f.name||'poster').replace(/\.[^.]+$/,'');$('tPoster').src=url;$('tPoster').hidden=false;autoColor();draw()}
+async function setQr(f){if(!f)return;const url=await readFile(f);qr=await loadImg(url);qrC=null;$('tQr').src=url;$('tQr').hidden=false;store.set('qrImg',url);$('qrNote').textContent='Saved — will be used next time too';draw()}
+
+$('fPoster').onchange=e=>setPoster(e.target.files[0]);
+$('fQr').onchange=e=>setQr(e.target.files[0]);
+for(const [d,fn] of [['dPoster',setPoster],['dQr',setQr]]){
+  const el=$(d);
+  el.ondragover=e=>{e.preventDefault();el.classList.add('over')};
+  el.ondragleave=()=>el.classList.remove('over');
+  el.ondrop=e=>{e.preventDefault();el.classList.remove('over');fn(e.dataTransfer.files[0])};
+}
+document.addEventListener('paste',e=>{const it=[...(e.clipboardData?.items||[])].find(i=>i.type.startsWith('image/'));if(it)(poster&&!qr?setQr:setPoster)(it.getAsFile())});
+
+function autoColor(){
+  if(!poster)return;
+  const c=document.createElement('canvas'),w=60,h=Math.round(60*poster.height/poster.width);
+  c.width=w;c.height=h;const x=c.getContext('2d');x.drawImage(poster,0,0,w,h);
+  const d=x.getImageData(0,Math.round(h*.88),w,Math.max(1,Math.round(h*.1))).data;
+  let r=0,g=0,b=0,n=0;for(let i=0;i<d.length;i+=4){r+=d[i];g+=d[i+1];b+=d[i+2];n++}
+  const hex=v=>Math.round(v/n).toString(16).padStart(2,'0');
+  $('bc').value='#'+hex(r)+hex(g)+hex(b);
+}
+
+// Crop the QR to its dark modules (drops its own margin / screenshot junk)
+function trimmed(img){
+  const w=img.naturalWidth,h=img.naturalHeight,c=document.createElement('canvas');
+  c.width=w;c.height=h;const x=c.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,w,h);x.drawImage(img,0,0);
+  const d=x.getImageData(0,0,w,h).data;let x0=w,y0=h,x1=-1,y1=-1;
+  for(let y=0;y<h;y++)for(let i=0;i<w;i++){const k=(y*w+i)*4;if(d[k]*.3+d[k+1]*.59+d[k+2]*.11<128){if(i<x0)x0=i;if(i>x1)x1=i;if(y<y0)y0=y;if(y>y1)y1=y}}
+  if(x1<0)return c;
+  const side=Math.max(x1-x0,y1-y0)+1,o=document.createElement('canvas');o.width=o.height=side;
+  const ox=o.getContext('2d');ox.fillStyle='#fff';ox.fillRect(0,0,side,side);ox.drawImage(c,x0,y0,x1-x0+1,y1-y0+1,0,0,x1-x0+1,y1-y0+1);
+  return o;
+}
+// Scale with smoothing, then force pure black/white so modules stay crisp
+function crispQr(q){
+  const t=document.createElement('canvas');t.width=t.height=q;const x=t.getContext('2d');
+  x.imageSmoothingEnabled=true;x.imageSmoothingQuality='high';x.drawImage(qrC,0,0,q,q);
+  const id=x.getImageData(0,0,q,q),d=id.data;
+  for(let i=0;i<d.length;i+=4){const v=d[i]*.3+d[i+1]*.59+d[i+2]*.11<140?0:255;d[i]=d[i+1]=d[i+2]=v;d[i+3]=255}
+  x.putImageData(id,0,0);return t;
+}
+let qrC=null;
+function draw(){
+  $('vSize').textContent=$('size').value+'% of width';$('vMar').textContent=$('mar').value+' px';
+  if(!poster){return}
+  const up=Math.max(1,1600/poster.naturalWidth);
+  cv.width=Math.round(poster.naturalWidth*up);cv.height=Math.round(poster.naturalHeight*up);
+  ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';ctx.drawImage(poster,0,0,cv.width,cv.height);
+  $('empty').hidden=true;cv.hidden=false;
+  const link=$('link').value.trim();
+  let gen=null;
+  if(link){
+    if(!window.qrcode){$('msg').textContent='QR maker could not load — check internet and reload.';$('save').disabled=true;return}
+    try{gen=qrcode(0,'M');gen.addData(link,'Byte');gen.make()}catch(e){$('msg').textContent='Link is too long for a QR.';$('save').disabled=true;return}
+  }
+  $('save').disabled=!(gen||qr);
+  if(!gen&&!qr){$('msg').textContent='Now paste the link.';return}
+  const W=cv.width,H=cv.height,s=W/1080;
+  const box=Math.round(W*$('size').value/100),pad=Math.round(box*.11),m=Math.round(+$('mar').value*s);
+  const p=$('pos').value,x=p.includes('r')?W-box-m:m,y=p.includes('b')?H-box-m:m;
+  const rad=Math.round(box*.1),bw=border?Math.max(2,Math.round(4*s)):0;
+  ctx.save();ctx.shadowColor='rgba(0,0,0,.25)';ctx.shadowBlur=10*s;ctx.shadowOffsetY=3*s;
+  ctx.fillStyle='#fff';ctx.beginPath();ctx.roundRect(x,y,box,box,rad);ctx.fill();ctx.restore();
+  if(bw){ctx.lineWidth=bw;ctx.strokeStyle=$('bc').value;ctx.beginPath();ctx.roundRect(x+bw/2,y+bw/2,box-bw,box-bw,rad);ctx.stroke()}
+  const q=box-2*pad-2*bw;
+  if(gen){
+    const n=gen.getModuleCount(),cell=Math.max(1,Math.floor(q/n)),qq=cell*n,ox=x+pad+bw+Math.floor((q-qq)/2),oy=y+pad+bw+Math.floor((q-qq)/2);
+    ctx.fillStyle='#000';
+    for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(gen.isDark(r,c))ctx.fillRect(ox+c*cell,oy+r*cell,cell,cell);
+  }else{
+    if(!qrC)qrC=trimmed(qr);
+    ctx.drawImage(crispQr(q),x+pad+bw,y+pad+bw);
+  }
+  $('msg').textContent=q<150?'QR is small ('+q+' px) — increase QR size if it does not scan.':'Ready. Scan the saved image once to check.';
+}
+['size','mar','pos'].forEach(id=>$(id).addEventListener('input',draw));
+$('link').addEventListener('input',()=>{store.set('qrLink',$('link').value.trim());draw()});
+$('link').value=store.get('qrLink')||'';
+$('bc').addEventListener('input',()=>{border=true;draw()});
+$('auto').onclick=()=>{autoColor();border=true;draw()};
+$('nob').onclick=()=>{border=false;draw()};
+
+const FMT={png:['image/png',undefined],jpg:['image/jpeg',.95],webp:['image/webp',.95]};
+$('fmt').value=store.get('fmt')||'png';
+const fmtLabel=()=>{$('save').textContent='Save '+$('fmt').value.toUpperCase()};fmtLabel();
+$('fmt').addEventListener('change',()=>{store.set('fmt',$('fmt').value);fmtLabel()});
+$('save').onclick=()=>{
+  const ext=$('fmt').value,[mime,qual]=FMT[ext];
+  cv.toBlob(async blob=>{
+    if(!blob){$('msg').textContent='This browser cannot make '+ext.toUpperCase()+' — choose another format.';return}
+    const name=posterName+'-qr.'+ext;
+    if(dl){try{await dl.save({filename:name,data:blob});$('msg').textContent='Saved: '+name;return}catch(e){if(e&&e.code==='declined'){$('msg').textContent='Save cancelled.';return}}}
+    try{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);$('msg').textContent='Downloaded: '+name+' (if nothing happened, long-press the preview → Save image)';}
+    catch(e){$('msg').textContent='Long-press or right-click the preview and choose "Save image".'}
+  },mime,qual);
+};
+
+(async()=>{const u=store.get('qrImg');if(u){try{qr=await loadImg(u);qrC=null;$('tQr').src=u;$('tQr').hidden=false;$('qrNote').textContent='Saved QR loaded — upload to replace'}catch(e){}}draw()})();
+(async()=>{try{dl=await window.claude?.use?.('downloads')}catch(e){dl=null}})();
+draw();
+}
+</script>
+</body>
+</html>
