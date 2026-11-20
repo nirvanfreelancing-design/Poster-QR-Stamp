@@ -1,6 +1,7 @@
 plugins { id 'com.android.application' }
 
 def ks = System.getenv("KEYSTORE_FILE")
+def vc = (project.findProperty('versionCode') ?: '1').toString().toInteger()
 
 android {
     namespace 'app.vsk.posterqr'
@@ -10,8 +11,8 @@ android {
         applicationId 'app.vsk.posterqr'
         minSdk 29
         targetSdk 34
-        versionCode (project.findProperty('versionCode') ?: '1').toInteger()
-        versionName "1.0.${versionCode}"
+        versionCode vc
+        versionName "1.0." + vc
     }
 
     signingConfigs {
@@ -28,7 +29,7 @@ android {
     buildTypes {
         release {
             minifyEnabled false
-            signingConfig (ks && new File(ks).exists()) ? signingConfigs.release : signingConfigs.debug
+            signingConfig = (ks && new File(ks).exists()) ? signingConfigs.release : signingConfigs.debug
         }
     }
 
