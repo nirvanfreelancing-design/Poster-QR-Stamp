@@ -1,0 +1,39 @@
+plugins { id 'com.android.application' }
+
+def ks = System.getenv("KEYSTORE_FILE")
+
+android {
+    namespace 'app.vsk.posterqr'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'app.vsk.posterqr'
+        minSdk 29
+        targetSdk 34
+        versionCode (project.findProperty('versionCode') ?: '1').toInteger()
+        versionName "1.0.${versionCode}"
+    }
+
+    signingConfigs {
+        release {
+            if (ks && new File(ks).exists()) {
+                storeFile file(ks)
+                storePassword System.getenv("KEYSTORE_PASSWORD")
+                keyAlias System.getenv("KEY_ALIAS")
+                keyPassword System.getenv("KEYSTORE_PASSWORD")
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig (ks && new File(ks).exists()) ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}

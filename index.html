@@ -173,6 +173,7 @@ $('save').onclick=()=>{
   cv.toBlob(async blob=>{
     if(!blob){$('msg').textContent='This browser cannot make '+ext.toUpperCase()+' — choose another format.';return}
     const name=posterName+'-qr.'+ext;
+    if(window.AndroidSaver){const fr=new FileReader();fr.onload=()=>{const ok=window.AndroidSaver.save(String(fr.result).split(',')[1],name,mime);$('msg').textContent=ok?'Saved to Pictures/PosterQR: '+name:'Could not save — check storage permission.'};fr.readAsDataURL(blob);return}
     if(dl){try{await dl.save({filename:name,data:blob});$('msg').textContent='Saved: '+name;return}catch(e){if(e&&e.code==='declined'){$('msg').textContent='Save cancelled.';return}}}
     try{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);$('msg').textContent='Downloaded: '+name+' (if nothing happened, long-press the preview → Save image)';}
     catch(e){$('msg').textContent='Long-press or right-click the preview and choose "Save image".'}
